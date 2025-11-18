@@ -1,4 +1,5 @@
 import os
+import random
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -58,11 +59,51 @@ def test_database():
         response["database"] = f"❌ Error: {str(e)[:50]}"
     
     # Check environment variables
-    import os
     response["database_url"] = "✅ Set" if os.getenv("DATABASE_URL") else "❌ Not Set"
     response["database_name"] = "✅ Set" if os.getenv("DATABASE_NAME") else "❌ Not Set"
     
     return response
+
+
+def _mock_quote(base: float):
+    # Simulate a small percentage change
+    pct = random.uniform(-3, 3)
+    value = base * (1 + pct / 100)
+    trend = "up" if pct >= 0 else "down"
+    return f"{value:.2f}", f"{pct:+.2f}%", trend
+
+@app.get("/api/market-data")
+def market_data():
+    """
+    Mock market data for BSE stocks. In production, integrate with Alpha Vantage and Yahoo Finance
+    using API keys provided via environment variables.
+    """
+    try:
+        bases = {
+            "reliance": ("💹 Reliance", 2450.0),
+            "tcs": ("💻 TCS", 3860.0),
+            "hdfc": ("🏦 HDFC Bank", 1460.0),
+            "icici": ("🏦 ICICI Bank", 1020.0),
+            "infy": ("🧠 Infosys", 1520.0),
+            "hul": ("🧼 HUL", 2460.0),
+            "sbi": ("🏛️ SBI", 610.0),
+            "airtel": ("📡 Airtel", 1150.0),
+            "bajaj": ("💳 Bajaj Finance", 7200.0),
+            "lt": ("🏗️ L&T", 3450.0),
+        }
+        data = {}
+        for key, (label, base) in bases.items():
+            value, change, trend = _mock_quote(base)
+            data[key] = {
+                "symbol": label,
+                "value": value,
+                "change": change,
+                "trend": trend,
+            }
+        return data
+    except Exception as e:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":
